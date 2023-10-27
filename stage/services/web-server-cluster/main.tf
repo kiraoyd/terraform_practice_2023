@@ -52,11 +52,20 @@ resource "aws_launch_configuration" "example" {
   instance_type = "t2.micro"
   security_groups = [aws_security_group.instance.id]
 
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Hello, World" > index.html
-              nohup busybox httpd -f -p ${var.server_port} &
-              EOF
+  #once we have the terraform_remote_data datasource set up in this file, we update this user_data (commenting the old one out):
+  #AND move it to the user-data.sh file
+#  user_data = <<-EOF
+#              #!/bin/bash
+#              echo "Hello, World" >> index.html
+#              nohup busybox httpd -f -p ${var.server_port} &
+#              EOF
+  #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function:
+  user_data = templatefile("user-data.sh", {
+    server_port = var.server_port
+    db_address = data.terraform_remote_state.db.outputs.address
+    db_port = data.terraform_remote_state.db.outputs.port
+  })
+
 
   lifecycle{
     create_before_destroy = true
@@ -193,15 +202,16 @@ resource "aws_lb_listener_rule" "asg" {
 #To delete the AWS resources, run terraform destroy
 
 
-#This allows the web server to read the outputs from the databases state file
+#This allows the web server to read the outputs from the databases state file thats shared in S3
 #By adding the terraform_remote_state data source
 #This data source configures the web server cluster code to read the state file from teh same S3 bucket and folder where the database stores its state
 #the data we get back here is read only
-#data "terraform_remote_state" "db" {
-#  backend = "s3"
-#  config = {
-#    bucket = "example-bucket-kirak-fullcircle"
-#    key    = "stage/data-stores/postgres/terraform.tfstate"
-#    region = "us-west-2"
-#  }
-#}
+data "terraform_remote_state" "db" {
+  backend = "s3"
+  config = {
+    bucket = "example-bucket-kirak-fullcircle"
+    key    = "live/data-stores/postgres/terraform.tfstate" #the location of the state file for the db
+    region = "us-east-2"
+  }
+}
+

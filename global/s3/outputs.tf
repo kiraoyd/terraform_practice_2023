@@ -9,3 +9,4 @@ output "dynamodb_table_name" {
 }
 
 #run apply to see these new output variables
+
