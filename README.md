@@ -25,7 +25,7 @@ To spin up from scratch:
 Terraform init followed by apply on all folders with main.tf in them. 
 In the s3 one, if you don't already have a bucket made, comment out the terraform config part before running the initial init.
 Do it in this order:
-1. s3 (your bucket)
+1. s3 (your bucket, also referred to as our 'backend')
 2. stage/data, and prod/data (your database)
 3. stage/web, and prod/web (your web server cluster)
 
@@ -99,6 +99,7 @@ To manually remove the Digest value from the DynamoDB table associated with your
 3. **View Table Items**: In the table details, navigate to the "Items" tab. Here, you will see a list of items (entries) in the table.
 
 4. **Identify the Item**: Look for the specific item related to your Terraform state. The item you need to edit will typically have a key with the name of your Terraform workspace or a unique identifier associated with your state.
+If you have items that don't look like they correspond with the names in your aws_dynamo_db table resource, you can manually delete them from your aws_console after deleting the digest value.
 
 5. **Edit the Item**: Select the item, and in the item details, locate the Digest value that's causing the checksum mismatch. This Digest value is what you need to remove.
 
@@ -123,3 +124,19 @@ To manually remove the Digest value from the DynamoDB table associated with your
 By removing the Digest value from the DynamoDB table, you should resolve the checksum mismatch issue and be able to work with your Terraform state as expected.
 
 Please be extremely cautious when making changes in DynamoDB, and ensure that you are working with the correct table and item to avoid unintended data loss. Always back up your state and data before making changes.
+
+
+# Nuking Everything
+
+Run ```terraform destroy``` in the directories in this order:
+1. ```stage/services/web-server-cluster```
+2. ```stage/data-stores/postgres```
+3. ```global/s3```
+
+Delete all these state files manually from each of those three directories:
+
+```current.tfstate```
+```terrafrom.tfstate```
+```terraform.tfstate.backup```
+
+Delete the .terraform folder in each of the three directories.

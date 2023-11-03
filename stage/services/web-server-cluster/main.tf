@@ -6,27 +6,40 @@
 #    key = "stage/services/webserver-cluster/terraform.tfstate"
 #  }
 #}
+
+terraform {
+  #
+  backend "s3" {
+    bucket = "example-bucket-kirak-fullcircle"
+    key = "stage/services/webserver-cluster/terraform.tfstate"
+    #key = "live/data-stores/postgres/terraform.tfstate"
+    region = "us-east-2"
+
+    dynamodb_table = "terraform-up-and-running-lock"
+    encrypt = true
+  }
+}
 #aws provider, deployed in the us-east-2 region
 provider "aws" {
   region = "us-east-2"
 }
 
-resource "aws_instance" "example"{
-  ami = "ami-0fb653ca2d3203ac1" #amazon machine image
-  instance_type = "t2.micro"  #type of EC2 instance to run, this one has 1 virtual CPU, 1 GB of memory and is part of AWS free Tier
-  vpc_security_group_ids = [aws_security_group.instance.id] #This expression references the resource aws_security_group
-  tags = {
-    Name = "terraform-example"
-  }
-  #<<-EOF and EOF wrap multiline strings without having to inser newline characters
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Hello, World" > index.html
-              nohup busybox httpd -f -p ${var.server_port} &
-              EOF
-  #This tells terraform to terminate the original instance and launch a new one
-  user_data_replace_on_change = true
-}
+#resource "aws_instance" "example"{
+#  ami = "ami-0fb653ca2d3203ac1" #amazon machine image
+#  instance_type = "t2.micro"  #type of EC2 instance to run, this one has 1 virtual CPU, 1 GB of memory and is part of AWS free Tier
+#  vpc_security_group_ids = [aws_security_group.instance.id] #This expression references the resource aws_security_group
+#  tags = {
+#    Name = "terraform-example"
+#  }
+#  #<<-EOF and EOF wrap multiline strings without having to inser newline characters
+#  user_data = <<-EOF
+#              #!/bin/bash
+#              echo "Hello, World" > index.html
+#              nohup busybox httpd -f -p ${var.server_port} &
+#              EOF
+#  #This tells terraform to terminate the original instance and launch a new one
+#  user_data_replace_on_change = true
+#}
 
 #Set up a security group so AWS will allow incoming and outgoing traffic from an EC2 instance
 resource "aws_security_group" "instance"{
@@ -51,15 +64,7 @@ resource "aws_launch_configuration" "example" {
   image_id = "ami-0fb653ca2d3203ac1"
   instance_type = "t2.micro"
   security_groups = [aws_security_group.instance.id]
-
-  #once we have the terraform_remote_data datasource set up in this file, we update this user_data (commenting the old one out):
-  #AND move it to the user-data.sh file
-#  user_data = <<-EOF
-#              #!/bin/bash
-#              echo "Hello, World" >> index.html
-#              nohup busybox httpd -f -p ${var.server_port} &
-#              EOF
-  #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function:
+  #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function we wrote in user-data.sh:
   user_data = templatefile("user-data.sh", {
     server_port = var.server_port
     db_address = data.terraform_remote_state.db.outputs.address
@@ -98,7 +103,7 @@ resource "aws_autoscaling_group" "example" {
   health_check_type = "ELB" #level of health_check to run
 
   min_size = 2
-  max_size = 10
+  max_size = 4
   tag{
     key = "Name"
     value = "terraform-asg-example"
@@ -210,7 +215,7 @@ data "terraform_remote_state" "db" {
   backend = "s3"
   config = {
     bucket = "example-bucket-kirak-fullcircle"
-    key    = "live/data-stores/postgres/terraform.tfstate" #the location of the state file for the db
+    key    = "stage/data-stores/postgres/terraform.tfstate" #the location of the state file for the db
     region = "us-east-2"
   }
 }

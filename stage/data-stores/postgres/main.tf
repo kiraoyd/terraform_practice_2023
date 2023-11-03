@@ -22,8 +22,8 @@ terraform {
   #
   backend "s3" {
     bucket = "example-bucket-kirak-fullcircle"
-    #key = "stage/data-stores/postgres/terraform.tfstate"
-    If I wkey = "live/data-stores/postgres/terraform.tfstate"
+    key = "stage/data-stores/postgres/terraform.tfstate"
+    #key = "live/data-stores/postgres/terraform.tfstate"
     region = "us-east-2"
 
     dynamodb_table = "terraform-up-and-running-lock"
