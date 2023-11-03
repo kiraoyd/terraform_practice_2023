@@ -13,6 +13,6 @@ terraform {
   # Reminder this is partial config, must run terraform init -backend-config=../../../global/config/backend.hcl  in postgres
   #
   backend "s3" {
-    key = "stage/data-stores/postgres/terraform.tfstate"
+    key = "prod/data-stores/postgres/terraform.tfstate"
   }
 }

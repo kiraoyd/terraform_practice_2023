@@ -1,24 +1,5 @@
 #Configure the providers we will use
 
-terraform {
-  # Reminder this is partial config, must use terraform init -backend-config=../../../global/config/backend.hcl  in web-server-cluster
-  backend "s3" {
-    key = "stage/services/webserver-cluster/terraform.tfstate"
-  }
-}
-
-#terraform {
-#  #
-#  backend "s3" {
-#    bucket = "example-bucket-kirak-fullcircle"
-#    key = "stage/services/webserver-cluster/terraform.tfstate"
-#    #key = "live/data-stores/postgres/terraform.tfstate"
-#    region = "us-east-2"
-#
-#    dynamodb_table = "terraform-up-and-running-lock"
-#    encrypt = true
-#  }
-#}
 #aws provider, deployed in the us-east-2 region
 provider "aws" {
   region = "us-east-2"
@@ -48,7 +29,7 @@ data "aws_subnets" "default" {
 
 #Set up a security group so AWS will allow incoming and outgoing traffic from an EC2 instance
 resource "aws_security_group" "instance"{
-  name = "terraform-example-instance"
+  name = "${var.cluster_name}-instance"
 
   ingress {
     #use the variable instead of hardcoding!
@@ -68,7 +49,7 @@ resource "aws_security_group" "instance"{
 resource "aws_launch_configuration" "example" {
   image_id = "ami-0fb653ca2d3203ac1"
   #image_id = "ami-03f65b8614a860c29"
-  instance_type = "t2.micro"
+  instance_type = var.instance_type
   security_groups = [aws_security_group.instance.id]
   #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function we wrote in user-data.sh:
   user_data = templatefile("user-data.sh", {
@@ -92,11 +73,11 @@ resource "aws_autoscaling_group" "example-asg" {
   target_group_arns = [aws_lb_target_group.asg.arn] #this target_group resource configured below
   health_check_type = "ELB" #level of health_check to run
 
-  min_size = 2
-  max_size = 4
+  min_size = var.min_size
+  max_size = var.max_size
   tag{
     key = "Name"
-    value = "example-asg"
+    value = "${var.cluster_name}-asg"
     propagate_at_launch = true
   }
 }
@@ -109,7 +90,7 @@ resource "aws_autoscaling_group" "example-asg" {
 #Set up a Security Resource for the alb resource (a firewall basically)
 #By default ALL AWS resources don't allow incoming or outgoing traffic
 resource "aws_security_group" "alb" {
-  name = "terraform-example-alb"
+  name = "${var.cluster_name}alb"
 
   #Allow inbound HTTP requests on port 80, allowing outside access to the load balancer over HTTP
   ingress {
@@ -129,7 +110,7 @@ resource "aws_security_group" "alb" {
 
 #Create the ALB (Application Load Balancer) resource:
 resource "aws_lb" "example-lb" {
-  name = "example-asg"
+  name = "${var.cluster_name}-asg"
   load_balancer_type= "application"
   #the load balancer needs to use all the subnets in our default VPC
   subnets = data.aws_subnets.default.ids #here is a reference to our aws_subnets datasource
@@ -206,8 +187,8 @@ resource "aws_lb_listener_rule" "asg" {
 data "terraform_remote_state" "db" {
   backend = "s3"
   config = {
-    bucket = "example-bucket-kirak-fullcircle"
-    key    = "stage/data-stores/postgres/terraform.tfstate" #the location of the state file for the db
+    bucket = var.db_remote_state_bucket
+    key    = var.db_remote_state_key #the location of the state file for the db
     region = "us-east-2"
   }
 }

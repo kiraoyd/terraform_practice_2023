@@ -9,7 +9,6 @@ variable "db_username" {
   description = "The username for the database"
   type        = string
   sensitive   = true #indicating a secret stored!
-  default = "dbuser" #just for dev purposes, not real prod (secret)
 }
 
 variable "db_password" {
@@ -17,12 +16,10 @@ variable "db_password" {
   description = "The password for the database"
   type        = string
   sensitive   = true #indicating a secret stored!
-  default = "example1234" #just for dev purposes, not real prod (secret)
 }
 
 variable "db_name" {
   description = "The name of the database"
-  type        = string
-  sensitive   = true
-  default = "fullcircle" #just for dev purposes, not real prod (secret)
+  type = string
+  sensitive = true
 }

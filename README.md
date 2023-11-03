@@ -150,6 +150,7 @@ Any terraform directory can be used as a reusable module. Key points:
 1. You create a module directory at the same level as your production, stage, and global directories
 2. When you want to use a module inside your prod and stage directories, 'call' it using this syntax: ```module "<name_of_module> { source = "../../../modules/services/<name_of_module_file>" }```
 This will allow the code in that module to run anywhere you call the module, without the need to copy paste.
+3. **Anytime you add a new module or modify the source parameter of a moduel, you have to run init!**
 3. Any hardcoded names in the module need to be replaced with input variables: make a variable in varitables.tf for that module, then replace all hardcoded names with ${variable_name} in the actual resource and module code 
 Basically, any name you want to be configurable or may vary depending on the environment, you want to make input variables
 4. If you want, you can set specific variables right there in the module syntax call, such as ```module "webserver-cluster" { source = "filepath" min_size = 2, max_size = 2```
@@ -176,3 +177,5 @@ module "<name> {
 }
     
 ```
+
+Note: In the modules, we no longer need the terraform { backend "s3"{}} block, that only has to live in the main.tf's of the folders that deploy this module.

@@ -22,7 +22,7 @@ variable "db_password" {
 
 variable "db_name" {
   description = "The name of the database"
-  type        = string
-  sensitive   = true
+  type = string
+  sensitive = true
   default = "fullcircle" #just for dev purposes, not real prod (secret)
 }
