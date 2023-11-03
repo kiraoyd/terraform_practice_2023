@@ -16,17 +16,25 @@ resource "aws_db_instance" "mem-overflow" {
   password = var.db_password
 }
 
-#configure this module to store its state in teh S3 bucket
+##configure this module to store its state in teh S3 bucket
+#terraform {
+#  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
+#  #
+#  backend "s3" {
+#    bucket = "example-bucket-kirak-fullcircle"
+#    key = "stage/data-stores/postgres/terraform.tfstate"
+#    #key = "live/data-stores/postgres/terraform.tfstate"
+#    region = "us-east-2"
+#
+#    dynamodb_table = "terraform-up-and-running-lock"
+#    encrypt = true
+#  }
+#}
+
 terraform {
-  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
+  # Reminder this is partial config, must run terraform init -backend-config=../../../global/config/backend.hcl  in postgres
   #
   backend "s3" {
-    bucket = "example-bucket-kirak-fullcircle"
     key = "stage/data-stores/postgres/terraform.tfstate"
-    #key = "live/data-stores/postgres/terraform.tfstate"
-    region = "us-east-2"
-
-    dynamodb_table = "terraform-up-and-running-lock"
-    encrypt = true
   }
 }

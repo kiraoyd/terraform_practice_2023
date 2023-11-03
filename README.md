@@ -1,5 +1,7 @@
 # Implementing the examples from the Terraform book
 
+Note: for Chapter 3 branch, the s3 bucket is region US-east-2, can't change it
+
 # Below is a record of important steps to be able to write and run these examples:
 
 When opening a new terminal, always run:
@@ -140,3 +142,37 @@ Delete all these state files manually from each of those three directories:
 ```terraform.tfstate.backup```
 
 Delete the .terraform folder in each of the three directories.
+
+
+# Modules
+
+Any terraform directory can be used as a reusable module. Key points:
+1. You create a module directory at the same level as your production, stage, and global directories
+2. When you want to use a module inside your prod and stage directories, 'call' it using this syntax: ```module "<name_of_module> { source = "../../../modules/services/<name_of_module_file>" }```
+This will allow the code in that module to run anywhere you call the module, without the need to copy paste.
+3. Any hardcoded names in the module need to be replaced with input variables: make a variable in varitables.tf for that module, then replace all hardcoded names with ${variable_name} in the actual resource and module code 
+Basically, any name you want to be configurable or may vary depending on the environment, you want to make input variables
+4. If you want, you can set specific variables right there in the module syntax call, such as ```module "webserver-cluster" { source = "filepath" min_size = 2, max_size = 2```
+5. If you want to make local values in a module, create a 'locals block', for example: 
+```terraform
+locals { 
+   http_port=80 
+   any_port = 0
+   all_ips=["0.0.0.0/0"]
+}
+``` 
+Then to use any of thee within the module just specify: ```local.<NAME>```
+6. you can have an outputs.tf file in your modules as well, and to access them outside the module via: ```module.<module_name>.<output_variable_name>```
+7. Versioned Modules: Store youor modules in a seperate repo, then when you call the module by declaring it in production or staging, you can apply version's to the name like so:
+```terraform
+#in stage
+module "<name> {
+   source = "<repo url...>ref=v0.0.1"
+}
+
+#in prod
+module "<name> {
+   source = "<repo url...>ref=v0.0.2"
+}
+    
+```

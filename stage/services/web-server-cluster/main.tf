@@ -1,45 +1,50 @@
 #Configure the providers we will use
 
-#terraform {
-#  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
-#  backend "s3" {
-#    key = "stage/services/webserver-cluster/terraform.tfstate"
-#  }
-#}
-
 terraform {
-  #
+  # Reminder this is partial config, must use terraform init -backend-config=../../../global/config/backend.hcl  in web-server-cluster
   backend "s3" {
-    bucket = "example-bucket-kirak-fullcircle"
     key = "stage/services/webserver-cluster/terraform.tfstate"
-    #key = "live/data-stores/postgres/terraform.tfstate"
-    region = "us-east-2"
-
-    dynamodb_table = "terraform-up-and-running-lock"
-    encrypt = true
   }
 }
+
+#terraform {
+#  #
+#  backend "s3" {
+#    bucket = "example-bucket-kirak-fullcircle"
+#    key = "stage/services/webserver-cluster/terraform.tfstate"
+#    #key = "live/data-stores/postgres/terraform.tfstate"
+#    region = "us-east-2"
+#
+#    dynamodb_table = "terraform-up-and-running-lock"
+#    encrypt = true
+#  }
+#}
 #aws provider, deployed in the us-east-2 region
 provider "aws" {
   region = "us-east-2"
 }
 
-#resource "aws_instance" "example"{
-#  ami = "ami-0fb653ca2d3203ac1" #amazon machine image
-#  instance_type = "t2.micro"  #type of EC2 instance to run, this one has 1 virtual CPU, 1 GB of memory and is part of AWS free Tier
-#  vpc_security_group_ids = [aws_security_group.instance.id] #This expression references the resource aws_security_group
-#  tags = {
-#    Name = "terraform-example"
-#  }
-#  #<<-EOF and EOF wrap multiline strings without having to inser newline characters
-#  user_data = <<-EOF
-#              #!/bin/bash
-#              echo "Hello, World" > index.html
-#              nohup busybox httpd -f -p ${var.server_port} &
-#              EOF
-#  #This tells terraform to terminate the original instance and launch a new one
-#  user_data_replace_on_change = true
-#}
+#GET SUBNET ID's into the ASG, specifying which VPC subnets the EC2 instances should be deployed to
+#Datasouce: read only information fetched from the provider (AWS) each time we run terraform
+
+#sets up the aws_vpc data source to look up the data for the default VPC (Virtual Private Cloud)
+data "aws_vpc" "default" {
+  default = true
+}
+
+#Allows us to look up all the subnets within the default VPC defined in the aws_vpc datasource
+data "aws_subnets" "default" {
+  filter {
+    name = "vpc-id"
+    values = [data.aws_vpc.default.id] #grabs the id from the aws_vpc data source
+  }
+  # Add this filter to select only the subnets in the us-west-2[a-c] Availability Zone because 2d doesn't support t2.micro
+  #  filter {
+  #    name = "availability-zone"
+  #    values = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  #  }
+}
+
 
 #Set up a security group so AWS will allow incoming and outgoing traffic from an EC2 instance
 resource "aws_security_group" "instance"{
@@ -62,6 +67,7 @@ resource "aws_security_group" "instance"{
 #Established how to configure each EC2 instance in the ASG
 resource "aws_launch_configuration" "example" {
   image_id = "ami-0fb653ca2d3203ac1"
+  #image_id = "ami-03f65b8614a860c29"
   instance_type = "t2.micro"
   security_groups = [aws_security_group.instance.id]
   #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function we wrote in user-data.sh:
@@ -70,31 +76,15 @@ resource "aws_launch_configuration" "example" {
     db_address = data.terraform_remote_state.db.outputs.address
     db_port = data.terraform_remote_state.db.outputs.port
   })
-
-
   lifecycle{
     create_before_destroy = true
   }
 }
 
-#GET SUBNET ID's into the ASG, specifying which VPC subnets the EC2 instances should be deployed to
-#Datasouce: read only information fetched from the provider (AWS) each time we run terraform
 
-#sets up the aws_vpc data source to look up the data for the default VPC (Virtual Private Cloud)
-data "aws_vpc" "default" {
-  default = true
-}
-
-#Allows us to look up all the subnets within the default VPC defined in the aws_vpc datasource
-data "aws_subnets" "default" {
-  filter {
-    name = "vpc-id"
-    values = [data.aws_vpc.default.id] #grabs the id from the aws_vpc data source
-  }
-}
 
 #Creates the ASG itself
-resource "aws_autoscaling_group" "example" {
+resource "aws_autoscaling_group" "example-asg" {
   launch_configuration = aws_launch_configuration.example.name
   #below is where we tell our ASG to use the default VPC subnets we want it to use
   vpc_zone_identifier = data.aws_subnets.default.ids
@@ -106,7 +96,7 @@ resource "aws_autoscaling_group" "example" {
   max_size = 4
   tag{
     key = "Name"
-    value = "terraform-asg-example"
+    value = "example-asg"
     propagate_at_launch = true
   }
 }
@@ -116,18 +106,58 @@ resource "aws_autoscaling_group" "example" {
 #Distribute trafffic across all our servers
 #The load balancers IP address will be the only one end users need to know to access ALL the servers
 
+#Set up a Security Resource for the alb resource (a firewall basically)
+#By default ALL AWS resources don't allow incoming or outgoing traffic
+resource "aws_security_group" "alb" {
+  name = "terraform-example-alb"
+
+  #Allow inbound HTTP requests on port 80, allowing outside access to the load balancer over HTTP
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 #Create the ALB (Application Load Balancer) resource:
-resource "aws_lb" "example" {
-  name = "terraform-asg-example"
+resource "aws_lb" "example-lb" {
+  name = "example-asg"
   load_balancer_type= "application"
   #the load balancer needs to use all the subnets in our default VPC
   subnets = data.aws_subnets.default.ids #here is a reference to our aws_subnets datasource
   security_groups = [aws_security_group.alb.id] #This resource gets defined below
 }
 
+#Set up the Target Group
+resource "aws_lb_target_group" "asg" {
+  name = "example-asg"
+  port = var.server_port
+  protocol = "HTTP"
+  vpc_id = data.aws_vpc.default.id
+
+  health_check {
+    path = "/"
+    protocol = "HTTP" #the form of the health check request
+    matcher = "200" #the expected response from the HTTP request
+    interval = 15
+    timeout = 3
+    healthy_threshold = 2
+    unhealthy_threshold = 2
+  }
+}
+
+
 #Define the ALB Listener, to listen on a specific port and protocol
-resource "aws_lb_listener" "http"{
-  load_balancer_arn = aws_lb.example.arn
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.example-lb.arn
   port = 80
   protocol = "HTTP"
 
@@ -143,45 +173,7 @@ resource "aws_lb_listener" "http"{
   }
 }
 
-#Set up a Security Resource for the alb resource (a firewall basically)
-#By default ALL AWS resources don't allow incoming or outgoing traffic
-resource "aws_security_group" "alb"{
-  name = "terraform-example-alb"
 
-  #Allow inbound HTTP requests on port 80, allowing outside access to the load balancer over HTTP
-  ingress{
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  #Allow all outbound requests on port 0, all ports, to allow the load balancer to perform health checks
-  egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-#Set up the Target Group
-resource "aws_lb_target_group" "asg" {
-  name = "terraform-asg-example"
-  port = var.server_port
-  protocol = "HTTP"
-  vpc_id = data.aws_vpc.default.id
-
-  health_check {
-    path = "/"
-    protocol = "HTTP" #the form of the health check request
-    matcher = "200" #the expected response from the HTTP request
-    interval = 15
-    timeout = 3
-    healthy_threshold = 2
-    unhealthy_threshold = 2
-  }
-}
 
 #Next up: write the listener_rules that match each request to a path
 #Acts like a router, grabs incoming requests and sends them to match specific paths
