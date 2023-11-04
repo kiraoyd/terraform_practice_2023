@@ -5,6 +5,14 @@ provider "aws" {
   region = "us-east-2"
 }
 
+locals {
+  http_port = 80
+  any_port = 0
+  any_protocol = "-1"
+  tcp_protocol = "tcp"
+  all_ips = [0.0.0.0/0]
+}
+
 #GET SUBNET ID's into the ASG, specifying which VPC subnets the EC2 instances should be deployed to
 #Datasouce: read only information fetched from the provider (AWS) each time we run terraform
 
@@ -31,15 +39,23 @@ data "aws_subnets" "default" {
 resource "aws_security_group" "instance"{
   name = "${var.cluster_name}-instance"
 
-  ingress {
-    #use the variable instead of hardcoding!
-    from_port=var.server_port
-    to_port=var.server_port
-    #from_port = 8080
-    #to_port = 8080
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  #We've now broken this in-line block out into it's own resource below: allow_http_inbound_instance
+#  ingress {
+#    #use the variable instead of hardcoding!
+#    from_port=local.http_port
+#    to_port=local.http_port
+#    protocol = local.tcp_protocol
+#    cidr_blocks = local.all_ips
+#  }
+}
+resource "aws_security_group_rule" "allow_http_inbound_instance"{
+  type ="ingress"
+  security_group_id = aws_security_group.instance.id
+
+  from_port=local.http_port
+  to_port=local.http_port
+  protocol = local.tcp_protocol
+  cidr_blocks = local.all_ips
 }
 
 #------DEPLOYING A CLUSTER OF WEB SERVERS--------
@@ -52,8 +68,9 @@ resource "aws_launch_configuration" "example" {
   instance_type = var.instance_type
   security_groups = [aws_security_group.instance.id]
   #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function we wrote in user-data.sh:
-  user_data = templatefile("user-data.sh", {
-    server_port = var.server_port
+  #use ${path.module} because you need a path relative to the module itself
+  user_data = templatefile("${path.module}/user-data.sh", {
+    server_port = local.http_port
     db_address = data.terraform_remote_state.db.outputs.address
     db_port = data.terraform_remote_state.db.outputs.port
   })
@@ -93,20 +110,42 @@ resource "aws_security_group" "alb" {
   name = "${var.cluster_name}alb"
 
   #Allow inbound HTTP requests on port 80, allowing outside access to the load balancer over HTTP
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  #Now broken out into seperate resources below: allow_http_inbound_alb and allow_all_outbound_alb
+#  ingress {
+#    from_port   = local.http_port
+#    to_port     = local.http_port
+#    protocol    = local.tcp_protocol
+#    cidr_blocks = local.all_ips
+#  }
+#
+#  egress {
+#    from_port   = local.any_port
+#    to_port     = local.any_port
+#    protocol    = local.any_protocol
+#    cidr_blocks = local.all_ips
+#  }
 }
+
+resource "aws_security_group_rule" "allow_http_inbound_alb"{
+  type ="ingress"
+  security_group_id = aws_security_group.alb.id
+
+  from_port=local.http_port
+  to_port=local.http_port
+  protocol = local.tcp_protocol
+  cidr_blocks = local.all_ips
+}
+
+resource "aws_security_group_rule" "allow_all_outbound_alb"{
+  type ="egress"
+  security_group_id = aws_security_group.alb.id
+
+  from_port   = local.any_port
+  to_port     = local.any_port
+  protocol    = local.any_protocol
+  cidr_blocks = local.all_ips
+}
+
 
 #Create the ALB (Application Load Balancer) resource:
 resource "aws_lb" "example-lb" {
@@ -120,7 +159,7 @@ resource "aws_lb" "example-lb" {
 #Set up the Target Group
 resource "aws_lb_target_group" "asg" {
   name = "example-asg"
-  port = var.server_port
+  port = local.http_port
   protocol = "HTTP"
   vpc_id = data.aws_vpc.default.id
 
@@ -139,7 +178,7 @@ resource "aws_lb_target_group" "asg" {
 #Define the ALB Listener, to listen on a specific port and protocol
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.example-lb.arn
-  port = 80
+  port = local.http_port
   protocol = "HTTP"
 
   #set up the default to return a simple 404 page

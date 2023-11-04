@@ -7,3 +7,4 @@ cat > index.html <<EOF
 EOF
 
 nohup busybox httpd -f -p ${server_port} &
+

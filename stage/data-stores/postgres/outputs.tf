@@ -1,12 +1,12 @@
 
 #These return the dbs address and port
 output "address" {
-  value       = aws_db_instance.mem-overflow.address
+  value       = module.postgres.address #ouput variable for the module
   description = "Connect to the database at this endpoint"
 }
 
 output "port" {
-  value       = aws_db_instance.mem-overflow.port
+  value       = module.postgres.port #output variable for the module
   description = "The port the database is listening on"
 }
 

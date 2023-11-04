@@ -26,3 +26,5 @@ variable "db_name" {
   sensitive   = true
   default = "fullcircle" #just for dev purposes, not real prod (secret)
 }
+
+#Could i just pass in the values when I call the module in prod instead of using defaults?

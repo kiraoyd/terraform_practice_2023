@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 module "postgres" {
-  source="../../../../modules/data-stores/postgres"
+  source="../../../modules/data-stores/postgres"
   db_name = var.db_name
   db_password = var.db_password
   db_username = var.db_username
