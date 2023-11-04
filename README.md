@@ -179,3 +179,22 @@ module "<name> {
 ```
 
 Note: In the modules, we no longer need the terraform { backend "s3"{}} block, that only has to live in the main.tf's of the folders that deploy this module.
+
+
+# Order of operations for Chapter 4 Refactor:
+
+**Set up the s3 bucket**
+1. just init-migrate -> s3
+2. just apply -> s3
+
+**prep the data-store postgres for both stage and prod**
+3. just init-migrate -> stage/postgres
+4. just apply -> stage/postgres
+5. just init-migrate -> prod/postgres
+6. just apply -> prod/postgres
+
+**Deploy the cluster from stage**
+7. just init-migrate -> stage/webserver-cluster
+8. just apply -> stage/webserver-cluster
+
+We don't have to run init and apply on the prod webserver-cluster, while the stage is running

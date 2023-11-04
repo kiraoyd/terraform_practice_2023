@@ -3,7 +3,7 @@
 variable "server_port"{
   description = "The port the server will use for HTTP requests"
   type = number
-  default=8080 #leaving this here saves us needing to enter it at runtime
+  default=80 #leaving this here saves us needing to enter it at runtime
 }
 
 variable "cluster_name" {
@@ -23,11 +23,11 @@ variable "db_remote_state_key" {
 
 variable "instance_type" {
   description="The type of EC2 instances to run (e.g. t2.micro vs a larger one)"
-  type = number
+  type = string
 }
 
 variable "min_size" {
-  description="The maximum number of EC2 instances in the ASG"
+  description="The minimum number of EC2 instances in the ASG"
   type = number
 }
 

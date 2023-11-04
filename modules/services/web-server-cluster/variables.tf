@@ -17,11 +17,11 @@ variable "db_remote_state_key" {
 
 variable "instance_type" {
   description="The type of EC2 instances to run (e.g. t2.micro vs a larger one)"
-  type = number
+  type = string
 }
 
 variable "min_size" {
-  description="The maximum number of EC2 instances in the ASG"
+  description="The minimum number of EC2 instances in the ASG"
   type = number
 }
 

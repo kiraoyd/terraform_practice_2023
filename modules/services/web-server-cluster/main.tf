@@ -10,7 +10,7 @@ locals {
   any_port = 0
   any_protocol = "-1"
   tcp_protocol = "tcp"
-  all_ips = [0.0.0.0/0]
+  all_ips = ["0.0.0.0/0"]
 }
 
 #GET SUBNET ID's into the ASG, specifying which VPC subnets the EC2 instances should be deployed to
