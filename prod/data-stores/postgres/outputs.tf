@@ -1,12 +1,12 @@
 
 #These return the dbs address and port
 output "address" {
-  value       = module.postgres.address #ouput variable for the module
+  value       = module.postgres.address #output variable for the module
   description = "Connect to the database at this endpoint"
 }
 
 output "port" {
-  value       = module.postgres.port #output variable for the module
+  value       = module.postgres.port #ouput variable for the module
   description = "The port the database is listening on"
 }
 
