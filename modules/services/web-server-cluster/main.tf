@@ -6,7 +6,7 @@ provider "aws" {
 }
 
 locals {
-  http_port = 80
+  http_port = 80 #was using this in the launch config causing the bad gateway error?
   any_port = 0
   any_protocol = "-1"
   tcp_protocol = "tcp"
@@ -63,16 +63,18 @@ resource "aws_security_group_rule" "allow_http_inbound_instance"{
 
 #Established how to configure each EC2 instance in the ASG
 resource "aws_launch_configuration" "example" {
-  image_id = "ami-0fb653ca2d3203ac1"
-  #image_id = "ami-03f65b8614a860c29"
+  #image_id = "ami-0fb653ca2d3203ac1"
+  image_id = "ami-03f65b8614a860c29" #this one matches Caseys repo
   instance_type = var.instance_type
   security_groups = [aws_security_group.instance.id]
   #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function we wrote in user-data.sh:
   #use ${path.module} because you need a path relative to the module itself
   user_data = templatefile("${path.module}/user-data.sh", {
-    server_port = local.http_port
+    #server_port = local.http_port
+    server_port = var.server_port #changing to debug bad gateway, 8080 instead of 80
     db_address = data.terraform_remote_state.db.outputs.address
     db_port = data.terraform_remote_state.db.outputs.port
+    server_text = var.server_text
   })
   lifecycle{
     create_before_destroy = true
@@ -83,6 +85,7 @@ resource "aws_launch_configuration" "example" {
 
 #Creates the ASG itself
 resource "aws_autoscaling_group" "example-asg" {
+  name = var.cluster_name
   launch_configuration = aws_launch_configuration.example.name
   #below is where we tell our ASG to use the default VPC subnets we want it to use
   vpc_zone_identifier = data.aws_subnets.default.ids
@@ -94,8 +97,20 @@ resource "aws_autoscaling_group" "example-asg" {
   max_size = var.max_size
   tag{
     key = "Name"
-    value = "${var.cluster_name}-asg"
+    #value = "${var.cluster_name}-asg"
+    value = var.cluster_name
     propagate_at_launch = true
+  }
+}
+
+#open port 8080 to all traffic
+resource "aws_security_group" "instance" {
+  name = "${var.cluster_name}-instance"
+  ingress {
+    from_port = var.server_port
+    to_port = var.server_port
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -108,24 +123,10 @@ resource "aws_autoscaling_group" "example-asg" {
 #By default ALL AWS resources don't allow incoming or outgoing traffic
 resource "aws_security_group" "alb" {
   name = "${var.cluster_name}alb"
-
-  #Allow inbound HTTP requests on port 80, allowing outside access to the load balancer over HTTP
-  #Now broken out into seperate resources below: allow_http_inbound_alb and allow_all_outbound_alb
-#  ingress {
-#    from_port   = local.http_port
-#    to_port     = local.http_port
-#    protocol    = local.tcp_protocol
-#    cidr_blocks = local.all_ips
-#  }
-#
-#  egress {
-#    from_port   = local.any_port
-#    to_port     = local.any_port
-#    protocol    = local.any_protocol
-#    cidr_blocks = local.all_ips
-#  }
 }
 
+#Allow inbound HTTP requests on port 80, allowing outside access to the load balancer over HTTP
+#Now broken out into seperate resources both below: allow_http_inbound_alb and allow_all_outbound_alb
 resource "aws_security_group_rule" "allow_http_inbound_alb"{
   type ="ingress"
   security_group_id = aws_security_group.alb.id
@@ -158,8 +159,8 @@ resource "aws_lb" "example-lb" {
 
 #Set up the Target Group
 resource "aws_lb_target_group" "asg" {
-  name = "example-asg"
-  port = local.http_port
+  name = "${var.cluster_name}-asg"
+  port = var.server_port
   protocol = "HTTP"
   vpc_id = data.aws_vpc.default.id
 

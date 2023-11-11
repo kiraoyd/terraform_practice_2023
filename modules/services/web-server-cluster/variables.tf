@@ -29,3 +29,15 @@ variable "max_size" {
   description="the maximum number of EC2 instances in the ASG"
   type = number
 }
+
+variable "server_port" {
+  description = "Port the server uses for HTTP requests"
+  type = number
+  default = 8080
+}
+
+variable "server_text" {
+  description = "The text the web server should return"
+  type = string
+  default = "Hello, World"
+}
