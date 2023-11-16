@@ -1,5 +1,7 @@
 # Implementing the examples from the Terraform book
 
+## For the love of bananas: ALWAYS put #!/bin/bash on LINE 1 of any bash script!!!
+
 Note: for Chapter 3 branch, the s3 bucket is region US-east-2, can't change it
 
 # Below is a record of important steps to be able to write and run these examples:
