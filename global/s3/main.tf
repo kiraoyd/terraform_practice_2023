@@ -57,6 +57,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
 #here we configure terraform itself to store the state in our S3 bucket
 ## Reminder this is partial config, must run terraform init -backend-config=../config/backend.hcl  in s3
 #
+
 terraform {
   backend "s3" {
 #    #name of s3 bucket to use

@@ -146,6 +146,9 @@ Delete the .terraform folder in each of the three directories.
 
 # Modules
 
+We do not need to run init or apply on modules.
+Those will happen automatically once we init and apply to the resources drawing on the modules.
+
 Any terraform directory can be used as a reusable module. Key points:
 1. You create a module directory at the same level as your production, stage, and global directories
 2. When you want to use a module inside your prod and stage directories, 'call' it using this syntax: ```module "<name_of_module> { source = "../../../modules/services/<name_of_module_file>" }```

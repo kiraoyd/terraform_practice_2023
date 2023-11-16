@@ -144,15 +144,15 @@ resource "aws_lb" "example-lb" {
   security_groups = [aws_security_group.alb.id] #This resource gets defined below
 
   #adding logs to alb
-#  enable_deletion_protection = false
-#
-#  enable_cross_zone_load_balancing = true
-#
-#  access_logs {
-#    bucket = "your-log-bucket"
-#    prefix = "lb-logs"
-#    enabled = true
-#  }
+  enable_deletion_protection = false
+
+  enable_cross_zone_load_balancing = true
+
+  access_logs {
+    bucket = "example-bucket-kirak-fullcircle"
+    prefix = "lb-logs"
+    enabled = true
+  }
 }
 
 #Set up the Target Group
