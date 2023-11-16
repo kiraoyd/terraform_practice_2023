@@ -1,4 +1,10 @@
 #Don't need the server port as a variable, as it can be stored in the modules locals now
+#LIES! The .sh file needs it!
+variable "server_port" {
+  description = "Port the server uses for HTTP requests"
+  type        = number
+  default     = 8080
+}
 
 variable "cluster_name" {
   description ="The name of the S3 bucket for the cluster resources."
