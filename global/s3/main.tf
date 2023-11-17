@@ -58,22 +58,31 @@ resource "aws_dynamodb_table" "terraform_locks" {
 ## Reminder this is partial config, must run terraform init -backend-config=../config/backend.hcl  in s3
 #
 
+/* code used when building a new bucket from scratch
 terraform {
   backend "s3" {
-#    #name of s3 bucket to use
-#    #bucket = "example-bucket-kirak-fullcircle"
-#    #filepath within the s3 bucket where the tf state file should be written
+    #name of s3 bucket to use
+    bucket = "example-bucket-kirak-fullcircle"
+    #filepath within the s3 bucket where the tf state file should be written
     key = "global/s3/terraform.tfstate"
-#    #region where the bucket lives, should match what we set for the s3 bucket earlier
-#    #region = "us-east-2"
-#
-#    #the table used for locking, reference the one we made earlier
-#    #dynamodb_table = "terraform-up-and-running-lock"
-#    #setting this to true ensures all state will be encrypted when stored to the s3, this is a second layer
-#    #encrypt = true
+    #region where the bucket lives, should match what we set for the s3 bucket earlier
+    region = "us-east-2"
+
+    #the table used for locking, reference the one we made earlier
+    dynamodb_table = "terraform-up-and-running-lock"
+    #setting this to true ensures all state will be encrypted when stored to the s3, this is a second layer
+    encrypt = true
   }
 }
 
 #run init again here
+*/
 
+#Code used for partial config, run after bucket creating using 'just init'
+terraform {
+  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
+  backend "s3" {
+    key = "global/s3/terraform.tfstate"
+  }
+}
 
