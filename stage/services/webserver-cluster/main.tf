@@ -5,6 +5,10 @@ provider "aws" {
 module "web_server_cluster"{
   source="../../../modules/services/web-server-cluster"
 
+  #Now we can set the ami and server_text parameters
+  ami = "ami-0fb653ca2d3203ac1"
+  server_text = "Goodbye microbe!" #our server text can now be variable!
+
   #set the values for the modules input variables here, specific to this environment (stage), they will be different for production
   cluster_name = var.cluster_name
   db_remote_state_bucket = var.db_remote_state_bucket

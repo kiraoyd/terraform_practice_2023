@@ -39,8 +39,7 @@ data "aws_subnets" "default" {
 
 #Established how to configure each EC2 instance in the ASG
 resource "aws_launch_configuration" "example" {
-  image_id = "ami-0fb653ca2d3203ac1"
-  #image_id = "ami-03f65b8614a860c29" #this one matches Caseys repo
+  image_id = var.ami #doable now that we've exposed the AMI in variables
   instance_type = var.instance_type
   security_groups = [aws_security_group.instance.id]
   #now instead of including the entire bash script here in the config, we jus make a call to the templatefile() function we wrote in user-data.sh:
@@ -60,8 +59,13 @@ resource "aws_launch_configuration" "example" {
 
 
 #Creates the ASG itself
+#We want the ASG to launch new instances, everytime we make changes to the launch configuration resource
 resource "aws_autoscaling_group" "example-asg" {
-  #name = var.cluster_name
+  #We want the ASG to launch new instances, everytime we make changes to the launch configuration resource
+  #First we need to explicity have the ASG depends on the launch configs name, so each time we replace the launch config, this ASG is also replaced
+  #name = "${var.cluster_name}-${aws_launch_configuration.example.name}"
+  name = var.cluster_name
+
   launch_configuration = aws_launch_configuration.example.name
   #below is where we tell our ASG to use the default VPC subnets we want it to use
   vpc_zone_identifier = data.aws_subnets.default.ids
@@ -71,11 +75,47 @@ resource "aws_autoscaling_group" "example-asg" {
 
   min_size = var.min_size
   max_size = var.max_size
+
+  #now we set the min instances that have to pass health checks before considering the ASG depoyment complete
+  #min_elb_capacity = var.min_size #remove in favor os instant refresh
+
+  #Set things so when replacing this ASG, create the replacement first, and only delete the original AFTER
+  #Please note: this resets the ASG size back to min_size after each deployment
+  #This disrupts any asg policies that increase the number of running servers
+  /* Remove in favor of instance refresh
+  lifecycle {
+    create_before_destroy = true
+  }
+  */
+
+  #instance refresh to roll out changes to the ASG, instead of zero downtime deployment
+  #This will kick off anytime we modify the launch config
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+  }
+
   tag{
     key = "Name"
     #value = "${var.cluster_name}-asg"
     value = var.cluster_name
     propagate_at_launch = true
+  }
+
+  #Adding a dynamic "tag", reference earlier in chapter 5 for as to why
+  dynamic "tag" {
+    for_each = {
+      for key, value in var.custom_tags:
+      key => upper(value)
+      if key != "Name"
+    }
+    content {
+      key = tag.key
+      value = tag.value
+      propagate_at_launch = true
+    }
   }
 }
 
