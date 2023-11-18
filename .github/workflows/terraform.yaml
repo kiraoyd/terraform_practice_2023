@@ -1,19 +1,32 @@
 name: Terraform Apply
 # Only run this workflow on commits to the main branch
+permissions:
+  id-token:write
+#when should we run this workflow?
 on:
   push:
-    branches:
+    branches: #on pushes to the following branches:
       - 'main'
-jobs:
+jobs: #what the workflow executes
   TerraformApply:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest #the OS
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2 #uses checkout action to clone repo onto runner
+        with: #specifically targets branch or pull request head ref associated with main
+          ref: ${{ github.event.pull_request.head.ref}}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      # Authenticate to AWS using OIDC
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          # Specify the IAM role to assume here - We get this from the  oidc_iam_role_arn output var
+            role-to-assume: arn:aws:iam::761765072103:role/github-actions-oidc-kirak20231118004645508100000001
+            aws-region: us-east-2
       # Run Terraform using HashiCorp's setup-terraform Action
-      - uses: hashicorp/setup-terraform@v1
-          with:
-            terraform_version: 1.1.0
-            terraform_wrapper: false
-      run: |
-        terraform init
-        terraform apply -auto-approve
+      - uses: hashicorp/setup-terraform@v1 #sets up Terraform CLI
+        with:
+          terraform_version: 1.1.0
+          terraform_wrapper: false #allows direct use of Terraform CLI
+        run: |   #runs the terraform commands
+          terraform init
+          terraform apply -auto-approve
+     
