@@ -214,6 +214,14 @@ The github-actions-oidc folder sets up AWS to authenticate github actions using 
 Now we shouldn't have to send in our AWS key and private key via the export ENV lines anymore.
 I'll test this and verify before removing those instructions from this readme.
 
+### To test github actions - AWS authentication
+
+1. push the repo 
+2. Navigate to the 'Actions' tab on github
+3. check the workflows, any errors will show there
+
+## database Creds Secrets
+
 We can use Amazon Secrets Manager to store the username and password to our database.
 We can store in plaintext via JSON.
 For this example, the secret I created is:
@@ -236,8 +244,14 @@ So we have to encrypt the plan files both in transit, and on disk.
 
 TODO: not sure how to ensure the plan files are encrypted...ASK CASEY
 
-# Spinnning things up as of Chapter 6:
+# Spinning things up as of Chapter 6:
 
 1. global/s3 --> just init-migrate (if any changes made to the s3)
 2. global/s3 --> just apply
+3. stage/data-stores/postgres --> just apply
+4. stage/services/webserver-cluster --> just apply
+5. Destroy everything to avoid charges: ./destroy_stage.sh followed by ./destroy_s3.sh
+
+# Next up: Chapter 7, using multiple providers
+
 
