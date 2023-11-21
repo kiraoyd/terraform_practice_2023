@@ -236,3 +236,8 @@ So we have to encrypt the plan files both in transit, and on disk.
 
 TODO: not sure how to ensure the plan files are encrypted...ASK CASEY
 
+# Spinnning things up as of Chapter 6:
+
+1. global/s3 --> just init-migrate (if any changes made to the s3)
+2. global/s3 --> just apply
+
