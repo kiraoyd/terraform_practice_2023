@@ -1,6 +1,7 @@
 #Resources to manage github workflows for credentials
 #Using OICD (Open ID Connect) to establish a trusted link between the CI system in github and our AWS cloud provider
 #Allowing us to authenticate to those providers without having to manage any credentials manually
+#------Specifically everything here lets github authenticate itself to our AWS account------#
 terraform {
   required_version = ">= 1.0.0, < 2.0.0"
 
@@ -72,3 +73,5 @@ resource "aws_iam_role_policy" "example" {
   role = aws_iam_role.instance.id
   policy = data.aws_iam_policy_document.ec2_admin_permissions.json
 }
+
+#----------------------------------------------------------#

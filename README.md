@@ -201,3 +201,11 @@ Note: In the modules, we no longer need the terraform { backend "s3"{}} block, t
 8. just apply -> stage/webserver-cluster
 
 We don't have to run init and apply on the prod webserver-cluster, while the stage is running
+
+# Github actions workflow
+
+Make sure your github access token has the right permissions to create or update workflows:
+
+1. Logon to github
+2. Settings --> Developer Settings --> Personal Access Tokens
+3. Geneate a new basic token with a "workflow" scope
