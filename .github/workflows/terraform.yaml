@@ -8,6 +8,7 @@ on:
     branches: #on pushes to the following branches:
       - 'main'
       - 'chapter6'
+      - 'chapter7'
 jobs: #what the workflow executes
   TerraformApply:
     runs-on: ubuntu-latest #the OS
