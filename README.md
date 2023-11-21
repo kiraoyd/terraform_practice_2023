@@ -208,4 +208,22 @@ Make sure your github access token has the right permissions to create or update
 
 1. Logon to github
 2. Settings --> Developer Settings --> Personal Access Tokens
-3. Geneate a new basic token with a "workflow" scope
+3. Generate a new basic token with a "workflow" scope
+
+The github-actions-oidc folder sets up AWS to authenticate github actions using the IAM role.
+Now we shouldn't have to send in our AWS key and private key via the export ENV lines anymore.
+I'll test this and verify before removing those instructions from this readme.
+
+We can use Amazon Secrets Manager to store the username and password to our database.
+We can store in plaintext via JSON.
+For this example, the secret I created is:
+```json
+{
+"username":"dbuser",
+"password":"example1234",
+"name":"fullcircle"
+}
+```
+And the name I gave the AWS secret is ```db-creds```
+Once stored in AWS, to get access to the secrets I can make a new datasource: "aws_secretsmanager_secret_version", parse the JSON using jsondecode() into the locals{} variables, and access them using the syntax: ```local.db_creds.username```.
+NOTE: where in the terraform should this go? I'm starting by putting it in modules/postgres/main.tf

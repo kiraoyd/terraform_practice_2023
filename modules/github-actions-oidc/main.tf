@@ -38,6 +38,7 @@ resource "aws_iam_role" "instance" {
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 }
 
+#allows the IAM role to be assumed by specific github repos
 data "aws_iam_policy_document" "assume_role_policy" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -51,12 +52,19 @@ data "aws_iam_policy_document" "assume_role_policy" {
     condition {
       test = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
+      #We will define the repos and branches in the variable: allowed_repos_branches
       values = [
         for a in var.allowed_repos_branches :
         "repo:${a["org"]}/${a["repo"]}:ref:refs/heads/${a["branch"]}"
       ]
     }
   }
+}
+
+#attach policy to the IAM role
+resource "aws_iam_role_policy" "example" {
+  role = aws_iam_role.instance.id
+  policy = data.aws_iam_policy_document.ec2_admin_permissions.json
 }
 
 #EC2 Permissions need to be added to the IAM role (default is none)
@@ -68,10 +76,6 @@ data "aws_iam_policy_document" "ec2_admin_permissions" {
   }
 }
 
-#attach policy to the IAM role
-resource "aws_iam_role_policy" "example" {
-  role = aws_iam_role.instance.id
-  policy = data.aws_iam_policy_document.ec2_admin_permissions.json
-}
+
 
 #----------------------------------------------------------#

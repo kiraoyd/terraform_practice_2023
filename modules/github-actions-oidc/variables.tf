@@ -5,6 +5,7 @@ variable "name" {
   default = "github-actions-oidc-kirak"
 }
 
+#We set these values in the terraform.tfvars file (works like a .env file)
 variable "allowed_repos_branches" {
   description = "GitHub repos/branches allowed to assume the IAM role."
   type = list(object({

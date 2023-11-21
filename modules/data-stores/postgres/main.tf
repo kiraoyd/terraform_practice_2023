@@ -2,6 +2,18 @@ provider "aws" {
   region = "us-east-2"
 }
 
+#The AWS secrets manager
+data "aws_secretsmanager_secret_version" "creds"{
+  secret_id = "db-creds"
+}
+
+#parse the AWS secrets JSON
+locals {
+  db_creds = jsondecode(
+    data.aws_secretsmanager_secret_version.creds.secret_string
+  )
+}
+
 #AWS database resource for postgres
 resource "aws_db_instance" "mem-overflow" {
   identifier_prefix   = "kirak-mem-overflow"
@@ -12,8 +24,12 @@ resource "aws_db_instance" "mem-overflow" {
   db_name             = var.db_name
   # How should we set the username and password?
   #This is where we want to use terraform_remote_state
-  username = var.db_username
-  password = var.db_password
+  #Replace the use of the var info, with the AWS secret instead
+  #username = var.db_username
+  #password = var.db_password
+
+  username = local.db_creds.username
+  password = local.db_creds.password
 }
 
 
