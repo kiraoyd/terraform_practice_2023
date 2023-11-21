@@ -1,7 +1,7 @@
 name: Terraform Apply
 # Only run this workflow on commits to the main branch
 permissions:
-  id-token:write
+  id-token: write
 #when should we run this workflow?
 on:
   push:
