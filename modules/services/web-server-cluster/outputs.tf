@@ -25,3 +25,8 @@ output "alb_security_group_id" {
   value = aws_security_group.alb.id
   description="The ID of the Security Group attached to te load balancer"
 }
+
+output "region_east" {
+  value = data.aws_region.region_east.name
+  description = "The name of the first region"
+}

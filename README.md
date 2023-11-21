@@ -254,4 +254,56 @@ TODO: not sure how to ensure the plan files are encrypted...ASK CASEY
 
 # Next up: Chapter 7, using multiple providers
 
+Providers are plugins for the terraform core.
+Each plugin is designed to work with the platforms like AWS and azure.
+Plugin code, like AWS provider stuff, lives in its own repo.
+When we add a provide block like:
+```
+provider "aws" {
+region = "us-east-2"
+}
+```
 
+terraform init will auto download the provider code for us (in our webserver code)
+But to have more control over providers, you want to use a required_providers block.
+
+We can also set more configurations to our actual provider, than just region.
+But what if we want to have some resources with the same provider, but a different config setup?
+We need to configure multiple COPIES of the same provider. To do this, set an alias:
+
+```
+provider "aws" {
+  region = "us-east-2"
+  #See the AWS provider documentation for all configuration options
+  alias = "region_east" #adding an alias allows us to make another copy of "aws" with different config
+}
+```
+
+Now when makine a resrouce, use the alias name:
+```
+data "aws_region" "region_east" {
+provider = aws.region_east
+}
+
+output "region_east" {
+value = data.aws_region.region_east.name
+description = "The name of the first region"
+}
+```
+
+If you set two different regions, the AMI ID's for each instance you make per region will differ per region
+
+Here is an example of how to make a data source that looks up AMI ID's for you:
+```terraform
+data "aws_ami" "ubuntu_region_1" {
+   provider = aws.region_1
+   most_recent = true
+   owners = ["099720109477"] # Canonical
+   filter {
+      name = "name"
+      values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+   }
+}
+```
+
+USE ALIAS'S sparingly! If one region goes down, and you need to change your terraform code, apply will stop working.

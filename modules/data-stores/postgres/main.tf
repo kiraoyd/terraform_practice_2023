@@ -15,6 +15,8 @@ locals {
 }
 
 #AWS database resource for postgres
+#Per chapter 7, we can update this to include a backup database, that lives in an entirely different region
+#No code to do this deployed yet, to save charges, but reference pages 230-231 in the book
 resource "aws_db_instance" "mem-overflow" {
   identifier_prefix   = "kirak-mem-overflow"
   engine              = "postgres"

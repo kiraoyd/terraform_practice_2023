@@ -1,8 +1,24 @@
 #Configure the providers we will use
 
+
+#Using this block gives us more control over our providers
+terraform {
+  required_providers{
+    aws = { #set the local name here, just as we did in the single provider block
+      source ="hasicorp/aws" #url to get the provider download
+      version = "~> 4.0"
+    }
+  }
+}
+
+#Turns out JUST doing it this way, requires the provider to be part of hasicorps namespace, and locks you into a specific version of said provider
+#We still want this block, so we can configure out provider
 #aws provider, deployed in the us-east-2 region
+
 provider "aws" {
   region = "us-east-2"
+  #See the AWS provider documentation for all configuration options
+  alias = "region_east" #adding an alias allows us to make another copy of "aws" with different config
 }
 
 locals {
@@ -11,6 +27,11 @@ locals {
   any_protocol = "-1"
   tcp_protocol = "tcp"
   all_ips = ["0.0.0.0/0"]
+}
+
+#test using the alias 'region_east"
+data "aws_region" "region_east" {
+  provider = aws.region_east
 }
 
 #GET SUBNET ID's into the ASG, specifying which VPC subnets the EC2 instances should be deployed to
