@@ -227,3 +227,12 @@ For this example, the secret I created is:
 And the name I gave the AWS secret is ```db-creds```
 Once stored in AWS, to get access to the secrets I can make a new datasource: "aws_secretsmanager_secret_version", parse the JSON using jsondecode() into the locals{} variables, and access them using the syntax: ```local.db_creds.username```.
 NOTE: where in the terraform should this go? I'm starting by putting it in modules/postgres/main.tf
+
+Next: Let's handle secrets being stored in our tf.state files.
+Lucky for us we are using a secure backend, S3. If we were in prod, we'd want to set the IAM policu to soley grant access to the S3 bucket to a small team of trusted devs.
+
+What about secrets in the Plan files? Secrets passed into the resources and data sources also end up here!
+So we have to encrypt the plan files both in transit, and on disk. 
+
+TODO: not sure how to ensure the plan files are encrypted...ASK CASEY
+
