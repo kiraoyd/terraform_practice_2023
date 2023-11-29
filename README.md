@@ -317,8 +317,14 @@ No OpenIDConnect provider found in your account for https://token.actions.github
 
 Kubernetes allows us to deploy Docker Containers at scale.
 It will streamline the process of distributing the containers across multiple AWS (or other providers) servers.
-Once we have kubernetes set up in our terraform infastructure, using the k8's-app service, we'll be able to host all of our websites docker containers across AWS's cloud.
+Once we have kubernetes set up in our terraform infastructure, using the kubernetes deployment and service, we'll be able to host all of our websites docker containers across AWS's cloud.
 Each Docker container that makes up our site, can be spun up on a different one of AWS's EC2 server instances, and kubernetes ensures they will all work together to deploy our site seamlessly.
+
+The Control Plane in kubernetes is responsible for managing the Kubernetes cluster, the 'brains' of the operation.
+It stores the clusters state, monitors the containers and coordinates actions across the cluster.
+It also runs the API server liek kubectl (API you can use from the command-line) to control whats happening in the cluster.
+
+Worker Nodes are the actual servers used to run your containers, they are entirely managed by the control plane which tells each worker node what containers it should run.
 Let's see if I can get the kubernetes deployment and service code up and running.
 
 Download kubectl:
@@ -347,13 +353,19 @@ We will use two kinds of objects here:
 1. kubernetes deployment
 2. kubernetes service
 
-Kubernetes Deployment
+### Kubernetes Deployment
 
 Declarataive way to manage an application in kubernetes.
 Declare docker images to run, how many copies to run, set their settings, configure the strategy for how to roll out updates to those images
 K-deployment will then ensure all the requirements you declared are always met.
 
-Kubernetes Service
+Containers are not deployed one at a time, they are deployed as Pods: groups of containers deployed together.
+
+You might have one Pod of containers where one container runs a web app, and another container in that Pod gathers metrics on the web app.
+We define and configure each Pod in the Pod Template block in main.tf's kubernetes_deployment resource.
+For this example, the local kubernetes will work with just ONE pod.
+
+### Kubernetes Service
 
 Exposes a web app running in kubernetes as a networked service. 
 example: Allows us to configure a load balancer to expose a public endopoint and distribute traffic from that endpoint all across the container/image copies in a kubernetes deployment.
@@ -377,3 +389,39 @@ The kubernetes load balancers is working to distribute traffic across these repl
 
 Kubernetes Deployments also have automatic update rollouts! 
 For fun we'll set a PROVIDER ENV in our simple web app, and run apply again.
+
+
+### Kubernetes in AWS using Elastic Kubernetes Service
+
+So now we have a local cluster working with kubernetes, lets take this over to the AWS cloud.
+
+We are setting up everything in the eks-cluster directory.
+
+Once that's done, we will add a new examples to the "examples" directory at top level: kubernetes-eks.
+
+I am going to wait to run terrafrom apply here, as I want to make sure I know how to tear this down and avoid charges in AWS first.
+
+
+# IMPORTANT KUBERNETES CAVEAT (from the book)!!
+
+In the Kubernetes example, you had a single
+module that deployed both the EKS cluster, using the AWS Provider, and a
+Kubernetes app into that cluster, using the Kubernetes provider. As it turns
+out, the Kubernetes provider documentation explicitly recommends against this
+pattern:
+
+```
+When using interpolation to pass credentials to the Kubernetes provider from
+other resources, these resources SHOULD NOT be created in the same Terraform
+module where Kubernetes provider resources are also used. This will lead to
+intermittent and unpredictable errors which are hard to debug and diagnose. The
+root issue lies with the order in which Terraform itself evaluates the provider
+blocks vs. actual resources.
+```
+
+The example code in this book is able to work around these issues by depending
+on the aws_eks_cluster_auth data source, but that’s a bit of a hack. Therefore,
+in production code, I always recommend deploying the EKS cluster in one
+module and deploying Kubernetes apps in separate modules, after the cluster has
+been deployed.
+

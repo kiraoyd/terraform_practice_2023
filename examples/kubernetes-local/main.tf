@@ -1,4 +1,14 @@
 #testing kubernetes using the book example on page 261
+
+
+#adding this provider will make this module deploy into our local kubernetes cluster
+#This tells the kubernetes provider to authenticate to your local kubernetes cluster by using the
+#docker-desktop context from your kubectl config
+provider "kubernetes" {
+  config_path = "~/.kube/config"
+  config_context = "docker-desktop"
+}
+
 module "simple-webapp" {
   source = "../../modules/services/k8s-app" #links to the kubernetes deployment and service we created
   name = "simple-webapp" #name of the kubernetes objects (based on their metadata)
@@ -12,10 +22,3 @@ module "simple-webapp" {
   }
 }
 
-#adding this provider will make this module deploy into our local kubernetes cluster
-#This tells the kubernetes provider to authentical to your local kubernetes cluster by using the
-#docker-desktop context from your kubectl config
-provider "kubernetes" {
-  config_path = "~/.kube/config"
-  config_context = "docker-desktop"
-}
