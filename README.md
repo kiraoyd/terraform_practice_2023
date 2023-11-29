@@ -307,3 +307,73 @@ data "aws_ami" "ubuntu_region_1" {
 ```
 
 USE ALIAS'S sparingly! If one region goes down, and you need to change your terraform code, apply will stop working.
+
+
+# Where to pick up next time: trouble shoot github actions erroring on:
+
+No OpenIDConnect provider found in your account for https://token.actions.githubusercontent.com
+
+# Kubernetes
+
+Kubernetes allows us to deploy Docker Containers at scale.
+It will streamline the process of distributing the containers across multiple AWS (or other providers) servers.
+Once we have kubernetes set up in our terraform infastructure, using the k8's-app service, we'll be able to host all of our websites docker containers across AWS's cloud.
+Each Docker container that makes up our site, can be spun up on a different one of AWS's EC2 server instances, and kubernetes ensures they will all work together to deploy our site seamlessly.
+Let's see if I can get the kubernetes deployment and service code up and running.
+
+Download kubectl:
+
+1. Get the binary: curl -LO https://dl.k8s.io/release/v1.28.4/bin/linux/amd64/kubectl
+
+2. Get the checksum file: curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+
+2. Checksum to validate: echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+
+Valid binary should output: ```kubecrtl: ok```
+
+3. Install kubectl: sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+4. Test: kubectl version --client
+
+Update $HOME/.kube/config file to tell it which kubernetes cluser to connect to. 
+Wheny ou enable Kubernetes in Docker Desktop, this gets updates automatially and all we need to do it tell kubectl to use it: ```kubectl config use-context docker-desktop``` 
+Check the cluser: ```kubectl get nodes```, to see info about all nodes in cluster.
+When running locally, the only node will be your computer (and it runs both the control plane and acts as a worker node)
+
+### Kubernetes Objects
+
+PErsistenet entities we write to the cluster than record the intent. The cluser continuously checks these objects stored in it, and makes the state of the cluster match your intent.
+We will use two kinds of objects here: 
+1. kubernetes deployment
+2. kubernetes service
+
+Kubernetes Deployment
+
+Declarataive way to manage an application in kubernetes.
+Declare docker images to run, how many copies to run, set their settings, configure the strategy for how to roll out updates to those images
+K-deployment will then ensure all the requirements you declared are always met.
+
+Kubernetes Service
+
+Exposes a web app running in kubernetes as a networked service. 
+example: Allows us to configure a load balancer to expose a public endopoint and distribute traffic from that endpoint all across the container/image copies in a kubernetes deployment.
+
+Rather than use yamls, we'll be using Terraform module ```k8s-app``` to deploy an app using K-deployment an K-service.
+
+Ok so now in the services/k8s-app directory I have the kubernetes deployment and service resources configured.
+Then in the examples/kubernetes-local directly, I've set up a tiny tiny web-app image example that I will use to test the code right now by running INNIT then APPLY, from that directory.
+After apply is successful test from the command line by running: ```curl http://localhost```, "Hello world!" should output tot he console
+
+Exploring the Cluster:
+
+To view the Kubernetes Deployment: ```kubectl get deployments```, will show the name we gave our deployment in the metadata block, and show us how many pods we have
+
+To view the pods themselves: ```kubectl get pods```, to see the multiple container replicas running
+
+All containers are being actively monitored and managed by kubernetes, if one crashes another will be deployed automatically.
+To see this in action run ```docker ps```, grab a container ID and run ```docker kill <container_ID>``` to force shut it down.
+A lightnight fast docker ps will show just one container remaining, but within seconds if you run it again you'll see the kubernetes deplyments has already launched a replacement!
+The kubernetes load balancers is working to distribute traffic across these replica dontainers, we can see this with: ```kubectl get services```, which first shows the kubernetes service itself, then the loadbalancer
+
+Kubernetes Deployments also have automatic update rollouts! 
+For fun we'll set a PROVIDER ENV in our simple web app, and run apply again.
