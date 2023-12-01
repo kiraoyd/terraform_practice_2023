@@ -401,6 +401,11 @@ Once that's done, we will add a new examples to the "examples" directory at top 
 
 I am going to wait to run terrafrom apply here, as I want to make sure I know how to tear this down and avoid charges in AWS first.
 
+Ok, in examples/kubernetes-eks I'm running init, then apply. Let's see what happens!
+Ah ok, no valid credential sources found error, this reminds me I need to go back and make sure my secrets are help properly.
+
+
+
 
 # IMPORTANT KUBERNETES CAVEAT (from the book)!!
 

@@ -44,7 +44,7 @@ data "aws_subnets" "default" {
 resource "aws_eks_cluster" "cluster" {
   name = var.name
   role_arn = aws_iam_role.cluster.arn #this is the IAM role we just made, and want the cluster to use
-  version = "1.21"
+  version = "1.28"
   vpc_config {
     subnet_ids = data.aws_subnets.default.ids
   }
