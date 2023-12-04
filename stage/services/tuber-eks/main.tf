@@ -1,4 +1,5 @@
-#Setting up an example deployment of the training/webapp Docker image to the EKS cluster we made in modules/services/eks-cluster
+#Setting up an example deployment of the training/webapp Docker image to the EKS clusterwe made in modules/services/eks-cluster
+#TODO we don't need kubernetes at all anymore, but will leave it around for reference
 provider "aws" {
   region = "us-east-2"
 }
@@ -6,7 +7,7 @@ provider "aws" {
 #This is making a new instance of the eks_cluster module we defined in modules
 module "eks_cluster" {
   #pass in all the values for this modules input vars
-  source         = "../../modules/services/eks-cluster"
+  source         = "../../../modules/services/eks-cluster"
   name           = "example-eks-cluster"
   min_size       = 1
   max_size       = 2
@@ -34,11 +35,11 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 
-#This is the SAME module deployment of the webapp we set up in modules/servicese/k8s-app
-module "simple_webapp" {
-  source                = "../../modules/services/k8s-app"
-  name                  = "simple-webapp"
-  image                 = "training/webapp"
+#This is the SAME module deployment of the webapp we set up in modules/services/k8s-app
+module "tuber_trader" {
+  source                = "../../../modules/services/k8s-app"
+  name                  = "tuber-trader"
+  image                 = "training/webapp" #THIS WILL CHANGE LATER TO OUR IMAGE!
   replicas              = 2
   container_port        = 5000
   environment_variables = {

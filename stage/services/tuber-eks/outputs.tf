@@ -9,6 +9,6 @@ output "cluster_endpoint" {
 }
 
 output "service_endpoint" {
-  value       = module.simple_webapp.service_endpoint
+  value       = module.tuber_trader.service_endpoint
   description = "The K8S Service endpoint"
 }

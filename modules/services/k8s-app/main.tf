@@ -23,6 +23,7 @@ resource "kubernetes_deployment" "app" {
   metadata {
     name = var.name
   }
+
   #the spec block contains the rest of the configuration
   spec {
     replicas = var.replicas #number of docker image replicas to make
