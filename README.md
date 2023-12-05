@@ -10,6 +10,10 @@ When opening a new terminal, always run:
  export AWS_SECRET_ACCESS_KEY=(your secret access key)
 ```
 
+## Testing a Docker Container loally
+1. ```docker build -t app_name .```
+2. ```docker run -it --rm -p 3000:3000 app_name```
+
 or you won't be able to connect to AWS.
 
 To see what changes will be made run:

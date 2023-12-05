@@ -1,46 +1,44 @@
 locals {
-  http_port = 3000
-  any_port = 0
+  http_port    = 3000
+  any_port     = 0
   any_protocol = "-1"
   tcp_protocol = "tcp"
-  all_ips = ["0.0.0.0/0"]
-  region = "us-east-2"
+  all_ips      = ["0.0.0.0/0"]
+  region       = "us-east-2"
 }
 
 provider "aws" {
   region = local.region
 }
 
-terraform {
-  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
-  backend "s3" {
-    key = "stage/services/rust_backend/terraform.tfstate"
-  }
-}
+# terraform {
+# 	# Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
+# 	backend "s3" {
+# 		key = "stage/services/rust_backend/terraform.tfstate"
+# 	}
+# }
 
-#Create the ECR repo instance to hold our image
+# moved to modules/services/ecr-registry
 resource "aws_ecr_repository" "app_ecr_repo" {
   name = "rust-backend"
 }
 
-# main.tf
 resource "aws_ecs_cluster" "rust_backend_cluster" {
-  name = "rust-backend-cluster" # Name your cluster here
+  name = "rust-backend-cluster"
 }
 
-#sets up the aws_vpc data source to look up the data for the default VPC (Virtual Private Cloud)
-#Exactly as we did it for the webserver cluster
+# Get default VPC for region
 data "aws_vpc" "default" {
   default = true
 }
 
-#exactly as we did it for the webserver cluster
-#Allows us to look up all the subnets within the default VPC defined in the aws_vpc datasource
+# Get default subnet within the aws_vpc
 data "aws_subnets" "default" {
   filter {
-    name = "vpc-id"
-    values = [data.aws_vpc.default.id] #grabs the id from the aws_vpc data source
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
   }
+
   # Add this filter to select only the subnets in the us-east-2[a-c] Availability Zone because 2d doesn't support t2.micro
   filter {
     name   = "availability-zone"
@@ -48,10 +46,7 @@ data "aws_subnets" "default" {
   }
 }
 
-
-#This configures and defines the resources in our container
-#This is analogous launch_configuration for the webserver cluster
-#We must do this before being able to launch the container
+# Add fargate serverless resources
 resource "aws_ecs_task_definition" "app_task" {
   family                   = "rust-backend-task" # Name your task
   container_definitions    = <<DEFINITION
@@ -78,7 +73,6 @@ resource "aws_ecs_task_definition" "app_task" {
   execution_role_arn       = aws_iam_role.ecsTaskExecutionRole.arn
 }
 
-#Required role within an IAM role to give permissions to create a task
 resource "aws_iam_role" "ecsTaskExecutionRole" {
   name               = "ecsTaskExecutionRole"
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
@@ -100,27 +94,10 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-#This is just the same stuff as we needed to set up when having our web-server-cluster serve our site, only NOW we want our rust-backend to serve our site
-
-## Provide a reference to your default VPC
-#resource "aws_default_vpc" "default_vpc" {
-#}
-#
-## Provide references to your default subnets
-#resource "aws_default_subnet" "default_subnet_a" {
-#  # Use your own region here but reference to subnet 1a
-#  availability_zone = "us-east-2a"
-#}
-#
-#resource "aws_default_subnet" "default_subnet_b" {
-#  # Use your own region here but reference to subnet 1b
-#  availability_zone = "us-east-2b"
-#}
-
+# Security group to allow ALB listeners to allow incoming reqs on 80 and allow all outgoing (for itself to communicate with VPCs)
 resource "aws_security_group" "alb" {
   name = "rust-backend-alb"
 }
-
 resource "aws_security_group_rule" "allow_http_inbound" {
   type              = "ingress"
   security_group_id = aws_security_group.alb.id
@@ -139,7 +116,6 @@ resource "aws_security_group_rule" "allow_all_outbound" {
   cidr_blocks       = local.all_ips
 }
 
-
 resource "aws_alb" "application_load_balancer" {
   name               = "load-balancer-dev" #load balancer name
   load_balancer_type = "application"
@@ -148,27 +124,26 @@ resource "aws_alb" "application_load_balancer" {
   security_groups = [aws_security_group.alb.id]
 }
 
-
 resource "aws_lb_target_group" "asg" {
-  name        = "rust-backend-asg"
-  port        = local.http_port
-  protocol    = "HTTP"
+  name     = "rust-backend-asg"
+  port     = local.http_port
+  protocol = "HTTP"
   target_type = "ip"
-  vpc_id      = data.aws_vpc.default.id # default VPC
+  vpc_id   = data.aws_vpc.default.id
 }
 
+# This is what forwards the actual requests to the correct destination behind the load balancer
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_alb.application_load_balancer.arn #  load balancer
+  load_balancer_arn = aws_alb.application_load_balancer.arn
   port              = local.http_port
   protocol          = "HTTP"
+
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.asg.arn # target group
+    target_group_arn = aws_lb_target_group.asg.arn
   }
 }
 
-
-#ECS is now what will manage our fleet of containers
 resource "aws_ecs_service" "rust_backend_service" {
   name            = "rust-backend-service"     # Name the service
   cluster         = aws_ecs_cluster.rust_backend_cluster.id   # Reference the created Cluster
@@ -177,7 +152,7 @@ resource "aws_ecs_service" "rust_backend_service" {
   desired_count   = 3 # Set up the number of containers to 3
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.asg.arn # Reference the target group
+    target_group_arn = aws_lb_target_group.asg.arn
     container_name   = aws_ecs_task_definition.app_task.family
     container_port   = local.http_port # Specify the container port
   }
@@ -188,7 +163,6 @@ resource "aws_ecs_service" "rust_backend_service" {
     security_groups  = [aws_security_group.alb.id] # Set up the security group
   }
 }
-
 
 # create security groups that will only allow the traffic from the created load balancer
 resource "aws_security_group" "service_security_group" {
@@ -208,7 +182,6 @@ resource "aws_security_group" "service_security_group" {
   }
 }
 
-#Log the load balancer app URL
 output "app_url" {
   value = aws_alb.application_load_balancer.dns_name
 }
