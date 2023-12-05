@@ -73,28 +73,45 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
 
 #This is just the same stuff as we needed to set up when having our web-server-cluster serve our site, only NOW we want our rust-backend to serve our site
 
-# Provide a reference to your default VPC
-resource "aws_default_vpc" "default_vpc" {
+## Provide a reference to your default VPC
+#resource "aws_default_vpc" "default_vpc" {
+#}
+#
+## Provide references to your default subnets
+#resource "aws_default_subnet" "default_subnet_a" {
+#  # Use your own region here but reference to subnet 1a
+#  availability_zone = "us-east-2a"
+#}
+#
+#resource "aws_default_subnet" "default_subnet_b" {
+#  # Use your own region here but reference to subnet 1b
+#  availability_zone = "us-east-2b"
+#}
+
+#sets up the aws_vpc data source to look up the data for the default VPC (Virtual Private Cloud)
+#Exactly as we did it for the webserver cluster
+data "aws_vpc" "default" {
+  default = true
 }
 
-# Provide references to your default subnets
-resource "aws_default_subnet" "default_subnet_a" {
-  # Use your own region here but reference to subnet 1a
-  availability_zone = "us-east-2a"
-}
-
-resource "aws_default_subnet" "default_subnet_b" {
-  # Use your own region here but reference to subnet 1b
-  availability_zone = "us-east-2b"
+#exactly as we did it for the webserver cluster
+#Allows us to look up all the subnets within the default VPC defined in the aws_vpc datasource
+data "aws_subnets" "default" {
+  filter {
+    name = "vpc-id"
+    values = [data.aws_vpc.default.id] #grabs the id from the aws_vpc data source
+  }
+  # Add this filter to select only the subnets in the us-west-2[a-c] Availability Zone because 2d doesn't support t2.micro
+  #  filter {
+  #    name = "availability-zone"
+  #    values = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  #  }
 }
 
 resource "aws_alb" "application_load_balancer" {
   name               = "load-balancer-dev" #load balancer name
   load_balancer_type = "application"
-  subnets = [ # Referencing the default subnets
-    "${aws_default_subnet.default_subnet_a.id}",
-    "${aws_default_subnet.default_subnet_b.id}"
-  ]
+  subnets = data.aws_subnets.default.ids
   # security group
   security_groups = ["${aws_security_group.load_balancer_security_group.id}"]
 }
@@ -121,7 +138,7 @@ resource "aws_lb_target_group" "target_group" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = "${aws_default_vpc.default_vpc.id}" # default VPC
+  vpc_id      = data.aws_vpc.default.id # default VPC
 }
 
 resource "aws_lb_listener" "listener" {
@@ -150,7 +167,7 @@ resource "aws_ecs_service" "app_service" {
   }
 
   network_configuration {
-    subnets          = ["${aws_default_subnet.default_subnet_a.id}", "${aws_default_subnet.default_subnet_b.id}"]
+    subnets          = data.aws_subnets.default.ids
     assign_public_ip = true     # Provide the containers with public IPs
     security_groups  = ["${aws_security_group.service_security_group.id}"] # Set up the security group
   }
