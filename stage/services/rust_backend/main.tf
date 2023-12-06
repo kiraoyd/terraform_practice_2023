@@ -23,6 +23,21 @@ resource "aws_ecr_repository" "app_ecr_repo" {
   name = "rust-backend"
 }
 
+#----GETTING SECRETS FROM AWS--------
+
+#Fetch the postgres outputs from the s3 state, scrape and store it in this datasource variable,
+#feed it to app_task so we can access the secrets ARN locations...
+#We can now reference this in the app_task via ...
+#data.terraform_remote_state.postgres.outputs.<name of postgres output for ARN>
+data "terraform_remote_state" "postgres" {
+  backend = "s3"
+  config = {
+    bucket = "example-bucket-kirak-fullcircle" # From backend.hcl
+    key    = "stage/data-stores/postgres/terraform.tfstate"
+    region = "us-east-2" # From backend.hcl
+  }
+}
+
 resource "aws_ecs_cluster" "rust_backend_cluster" {
   name = "rust-backend-cluster"
 }
@@ -47,6 +62,7 @@ data "aws_subnets" "default" {
 }
 
 # Add fargate serverless resources
+#Secrets sections uses the postgres datasource to get ahold of the postgres info
 resource "aws_ecs_task_definition" "app_task" {
   family                   = "rust-backend-task" # Name your task
   container_definitions    = <<DEFINITION
@@ -62,7 +78,18 @@ resource "aws_ecs_task_definition" "app_task" {
         }
       ],
       "memory": 512,
-      "cpu": 256
+      "cpu": 256,
+      "secrets": [
+        {
+          "name": "DATABASE_USERNAME",
+          "valueFrom":"${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:username::"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "valueFrom":"${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:password::"
+        },
+        #repeat for the host and port
+      ]
     }
   ]
   DEFINITION
@@ -185,3 +212,4 @@ resource "aws_security_group" "service_security_group" {
 output "app_url" {
   value = aws_alb.application_load_balancer.dns_name
 }
+
