@@ -79,16 +79,23 @@ resource "aws_ecs_task_definition" "app_task" {
       ],
       "memory": 512,
       "cpu": 256,
-      "secrets": [
+      "environment": [
         {
           "name": "DATABASE_USERNAME",
-          "valueFrom":"${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:username::"
+          "valueFrom" : "${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:username::"
         },
         {
           "name": "DATABASE_PASSWORD",
-          "valueFrom":"${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:password::"
+          "valueFrom" : "${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:password::"
         },
-        #repeat for the host and port
+        {
+          "name": "DATABASE_HOST",
+          "valueFrom" : "${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:address::"
+        },
+        {
+          "name":"DATABASE_PORT",
+          "valueFrom" : "${data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn}:port::"
+        }
       ]
     }
   ]
@@ -120,6 +127,29 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
   role       = aws_iam_role.ecsTaskExecutionRole.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
+
+#---SAVED BY WILL!------
+# Define an IAM policy that grants the task access to the necessary secrets
+data "aws_iam_policy_document" "ecs_secrets_policy" {
+  statement {
+    #		effect    = "Allow"
+    actions   = ["secretsmanager:GetSecretValue"]
+    resources = [data.terraform_remote_state.postgres.outputs.db_credentials_secret_arn]
+  }
+}
+
+# Create the IAM policy resource
+resource "aws_iam_policy" "ecs_secrets_iam_policy" {
+  name   = "ecs-tasks-access-secrets"
+  policy = data.aws_iam_policy_document.ecs_secrets_policy.json
+}
+
+# Attach the policy to the existing ECS Task Execution Role
+resource "aws_iam_role_policy_attachment" "ecs_secrets_policy_attachment" {
+  role       = aws_iam_role.ecsTaskExecutionRole.name
+  policy_arn = aws_iam_policy.ecs_secrets_iam_policy.arn
+}
+#-----above was needed to allow the secrets through-------
 
 # Security group to allow ALB listeners to allow incoming reqs on 80 and allow all outgoing (for itself to communicate with VPCs)
 resource "aws_security_group" "alb" {
