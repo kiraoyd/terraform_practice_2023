@@ -7,7 +7,8 @@ Note: for Chapter 3 branch, the s3 bucket is region US-east-2, can't change it
 When opening a new terminal, always run:and hang on, I mi
 ```
  export AWS_ACCESS_KEY_ID=(your access key id)
- export AWS_SECRET_ACCESS_KEY=(your secret access key)
+ 
+ (your secret access key)
 ```
 
 ## Testing a Docker Container loally
