@@ -1,3 +1,13 @@
+# Deploying a live site using Terraform and AWS
+
+Basics of terraform setup built following the book: Terraform Up & Running, Writing Infastructure as Code, By Yevgeniy Birkman
+
+This project is a work in progress.
+
+Branch 'main' represented implementation of the books example up to Chapter 4.
+
+Branch 'almostDied' contains the most recent work adjusting the AWS setup book foundations to work with my Rust site "Almost Died Today", which utilizes a postgres database and is contained in a Docker Image. Currently the 'almostDied' branch's Terraform code is hooked up to a super basic Axum server Docker Image, that we will swap out for the actual Almost Died Today Docker Image once it is prepared (it needs to be brought back up to speed as some of the SQLX is now deprecated). 
+
 # Implementing the examples from the Terraform book
 
 ## For the love of bananas: ALWAYS put #!/bin/bash on LINE 1 of any bash script!!!
